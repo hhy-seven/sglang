@@ -1303,12 +1303,28 @@ class ResponseReasoningParam(BaseModel):
     )
 
 
+# Only ``function`` / ``web_search*`` / ``code_interpreter`` are wired to
+# execution paths; the rest pass validation so clients aren't rejected.
+RESPONSE_TOOL_TYPES = Literal[
+    "function",
+    "web_search",
+    "web_search_preview",
+    "code_interpreter",
+    "file_search",
+    "image_generation",
+    "computer_use_preview",
+    "local_shell",
+    "mcp",
+    "custom",
+    "namespace",
+    "tool_search",
+]
+
+
 class ResponseTool(BaseModel):
     """Tool definition for responses."""
 
-    type: Literal["web_search_preview", "code_interpreter", "function"] = Field(
-        description="Type of tool to enable"
-    )
+    type: RESPONSE_TOOL_TYPES = Field(description="Type of tool to enable")
     # Function tool fields (required when type="function")
     name: Optional[str] = Field(
         default=None,
@@ -1326,6 +1342,8 @@ class ResponseTool(BaseModel):
         default=None,
         description="Whether to enforce strict schema validation",
     )
+    # Inner schemas for ``namespace`` tools.
+    tools: Optional[List[Dict[str, Any]]] = None
 
     @model_validator(mode="after")
     def validate_function_fields(self) -> "ResponseTool":
@@ -1360,7 +1378,7 @@ class ResponsesRequest(BaseModel):
             ]
         ]
     ] = None
-    input: Union[str, List[ResponseInputOutputItem]]
+    input: Union[str, List[ResponseInputOutputItem], List[Dict[str, Any]]]
     instructions: Optional[str] = None
     max_output_tokens: Optional[int] = None
     max_tool_calls: Optional[int] = None
